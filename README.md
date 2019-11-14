@@ -3,4 +3,4 @@
 ## nlp-telegram-chatbot
 
 ### Description:
-telegram chatbot with natural language processing
+Telegram chatbot with natural language processing

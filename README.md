@@ -7,7 +7,7 @@ telegram chatbot with natural language processing
 
 ## Dependencies
 
-####Install Prolog
+#### Install Prolog
 Ubuntu, Debian:
 ```bash
 $ sudo apt-get install swi-prolog

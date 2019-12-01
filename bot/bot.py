@@ -81,14 +81,8 @@ class CurrencyInfoBot:
 
 	@staticmethod
 	def voice_message(update, context):
-		"""Handle an voice message."""
+		"""Handle a voice message."""
 		update.message.reply_text('Processing voice message...')
-
-	@staticmethod
-	def other_message(update, context):
-		"""Handle all other message types."""
-		if update.message:
-			update.message.reply_text(msg.INVALID)
 
 	def _log_error(self, update, context):
 		"""Log Errors caused by Updates."""

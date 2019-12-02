@@ -5,6 +5,7 @@ cryptography==2.8
 future==0.18.2
 idna==2.8
 pycparser==2.19
+pyswip==0.2.9
 python-telegram-bot==12.2.0
 requests==2.22.0
 six==1.13.0

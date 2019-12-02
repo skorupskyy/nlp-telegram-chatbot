@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from bot import messages as msg
-from bot.logging import logger as default_logger
+from app.logging import logger as default_logger
 
 from telegram.ext.filters import Filters
 from telegram.ext import Updater, CommandHandler, MessageHandler

@@ -1,9 +1,9 @@
 from bot import CurrencyInfoBot
-from bot.settings import TOKEN
+from app.settings import TELEGRAM_BOT_TOKEN
 
 
 def main():
-	bot = CurrencyInfoBot(TOKEN)
+	bot = CurrencyInfoBot(TELEGRAM_BOT_TOKEN)
 	bot.start()
 
 

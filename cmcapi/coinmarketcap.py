@@ -1,16 +1,16 @@
 import time, requests, json
 import datetime as data
-# from cmcapi.settings import headers, latest_quotes_url
+from cmcapi.settings import headers, latest_quotes_url
 # ModuleNotFoundError: No module named 'cmcapi'?
 # ModuleNotFoundError: No module named 'bot'?
 
-X_CMC_PRO_API_KEY = "7d82ac5a-fd68-44fd-81fc-23e1637b0f31"
-latest_quotes_url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?'
-headers = {
- 'Accept': 'application/json',
- 'Accept-Encoding': 'deflate, gzip',
- 'X-CMC_PRO_API_KEY': X_CMC_PRO_API_KEY,
- }
+# X_CMC_PRO_API_KEY = "7d82ac5a-fd68-44fd-81fc-23e1637b0f31"
+# latest_quotes_url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?'
+# headers = {
+#  'Accept': 'application/json',
+#  'Accept-Encoding': 'deflate, gzip',
+#  'X-CMC_PRO_API_KEY': X_CMC_PRO_API_KEY,
+#  }
 
 url = latest_quotes_url
 headers = headers
@@ -82,7 +82,8 @@ def get_price(names, convert="USD"):
         })
     return result
 
-for x in get_price(["BTC", "ETH"], "UAH"):
-    for y in x:
-        print("{} : {}".format(y, x[y]))
+if __name__ == "__main__":
+    for x in get_price(["BTC", "ETH"], "UAH"):
+        for y in x:
+            print("{} : {}".format(y, x[y]))
     print()

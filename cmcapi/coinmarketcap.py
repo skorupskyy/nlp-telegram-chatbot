@@ -64,7 +64,7 @@ def get_prices(names, convert='USD'):
 			'market_capacity': currency['quote'][convert]['market_cap']
 		}
 
-	return list(map(get_info, data['data']))
+	return sorted(list(map(get_info, data['data'])), key=lambda x: x['rank'])
 
 
 # Loads list of currencies for normalization.
@@ -83,8 +83,25 @@ def load_currencies():
 		return json.load(f)
 
 
+# !ATTENTION! Manual use only!!!
+# Updates "./currency.json" file with top 500 currencies.
+def update_currency_list():
+	limit = 1000
+	data = requests.get(
+		'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit={}'.format(limit),
+		headers=X_CMC_PRO_API_HEADERS
+	).json()['data']
+	result = {'ripple': 'XRP'}
+	for curr in data:
+		result[curr['name'].lower()] = curr['symbol']
+		result[curr['symbol'].lower()] = curr['symbol']
+	with open('./currencies.json', 'w') as fp:
+		json.dump(result, fp, indent=2)
+
+
 # TODO: temporary driver program.
 if __name__ == '__main__':
+	# update_currency_list()
 	for i in get_prices(['BTC', 'ETH'], 'UAH'):
 		for y in i:
 			print('{}: {}'.format(y, i[y]))

@@ -8,6 +8,7 @@ from app.logging import logger as default_logger
 from requests.exceptions import HTTPError
 
 from telegram.ext.filters import Filters
+from telegram import ParseMode as pm
 from telegram.ext import Updater, CommandHandler, MessageHandler
 
 
@@ -97,9 +98,9 @@ class CurrencyInfoBot:
 			prices = get_prices(from_currs, to_curr)
 			response_text = fmt.make_general(prices)
 		except HTTPError as exc:
-			self._logger.warning('Unable to receive prices: {}', exc)
-			response_text = 'Service is currently unavailable...\nPlease, try again later...'
-			
+			self._logger.warning('Unable to receive prices: {}'.format(exc))
+			response_text = 'Unable to collect currencies info: {}'.format(exc)
+
 		update.message.reply_text(response_text)
 
 	# Handles a voice message.

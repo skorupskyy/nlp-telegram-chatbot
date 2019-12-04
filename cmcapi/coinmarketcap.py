@@ -53,17 +53,17 @@ def get_prices(names, convert='USD'):
 	def get_info(_x):
 		currency = data['data'][_x]
 		return {
-			'name': currency['name'],
-			'symbol': currency['symbol'],
+			'from_name': currency['name'],
+			'from_symbol': currency['symbol'],
 			'rank': currency['cmc_rank'],
-			'convert_currency': convert,
-			'current_price': currency['quote'][convert]['price'],
-			'percent_change_per_1h': currency['quote'][convert]['percent_change_1h'],
-			'percent_change_per_24h': currency['quote'][convert]['percent_change_24h'],
-			'percent_change_per_7d': currency['quote'][convert]['percent_change_7d'],
+			'to_symbol': convert,
+			'price': currency['quote'][convert]['price'],
+			'change_per_1h': currency['quote'][convert]['percent_change_1h'],
+			'change_per_24h': currency['quote'][convert]['percent_change_24h'],
+			'change_per_7d': currency['quote'][convert]['percent_change_7d'],
 			'market_capacity': currency['quote'][convert]['market_cap']
 		}
-	
+
 	return list(map(get_info, data['data']))
 
 

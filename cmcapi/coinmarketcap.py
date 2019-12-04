@@ -1,3 +1,6 @@
+import os
+import json
+
 import requests
 from requests.exceptions import HTTPError
 
@@ -20,7 +23,7 @@ def req(url):
 	raise HTTPError(str(data['status']['error_message']))
 
 
-def form_url(names, convert):
+def make_url(names, convert):
 	full_url = X_CMC_PRO_API_QUOTES_LATEST_URL
 	count_of_symbols = 0
 	for x in names:
@@ -38,40 +41,55 @@ def form_url(names, convert):
 	return full_url
 
 
-def get_price(names, convert='USD'):
-	"""
-	names: list of crypto currency slugs or symbols (list of strings)
-	convert: symbol of the crypto currency or fiat currency we want to convert to (string)
-	usage:
-		get_price(["BTC", "ETH"], "UAH")
-		get_price(["bitcoin", "ethereum"])
-	returns list of dicts
-	"""
-	currencies = {}
-	data = req(form_url(names, convert))
+# names: list of crypto currency slugs or symbols (list of strings)
+# convert: symbol of the crypto currency or fiat currency we want to convert to (string)
+# usage:
+# 	get_price(['BTC', 'ETH'], 'UAH')
+# 	get_price(['bitcoin', 'ethereum'])
+# returns list of dicts
+def get_prices(names, convert='USD'):
+	data = req(make_url(names, convert))
 	
-	for x in data['data']:
-		currencies[x] = data['data'][x]['name']
-
 	def get_info(_x):
+		currency = data['data'][_x]
 		return {
-			'name': currencies[_x],
-			'symbol': data['data'][_x]['symbol'],
-			'rank': data['data'][_x]['cmc_rank'],
+			'name': currency['name'],
+			'symbol': currency['symbol'],
+			'rank': currency['cmc_rank'],
 			'convert_currency': convert,
-			'current_price': data['data'][_x]['quote'][convert]['price'],
-			'percent_change_per_1h': data['data'][_x]['quote'][convert]['percent_change_1h'],
-			'percent_change_per_24h': data['data'][_x]['quote'][convert]['percent_change_24h'],
-			'percent_change_per_7d': data['data'][_x]['quote'][convert]['percent_change_7d'],
-			'market_capacity': data['data'][_x]['quote'][convert]['market_cap']
+			'current_price': currency['quote'][convert]['price'],
+			'percent_change_per_1h': currency['quote'][convert]['percent_change_1h'],
+			'percent_change_per_24h': currency['quote'][convert]['percent_change_24h'],
+			'percent_change_per_7d': currency['quote'][convert]['percent_change_7d'],
+			'market_capacity': currency['quote'][convert]['market_cap']
 		}
 	
-	return list(map(get_info, currencies))
+	return list(map(get_info, data['data']))
+
+
+# Loads list of currencies for normalization.
+#
+# "currencies.json" example:
+# {
+#   "bitcoin": "BTC",
+#   "btc": "BTC",
+#   "ripple": "XRP",
+#   "xrp": "XRP",
+# }
+def load_currencies():
+	currencies_path = '{}/currencies.json'.format(os.path.dirname(os.path.abspath(__file__)))
+	assert os.path.exists(currencies_path)
+	with open(currencies_path, 'r') as f:
+		return json.load(f)
 
 
 # TODO: temporary driver program.
 if __name__ == '__main__':
-	for i in get_price(['BTC', 'ETH'], 'UAH'):
-		for y in i:
-			print('{}: {}'.format(y, i[y]))
-	print()
+	from bot.util import format_general
+	print(format_general(get_price(['BTC', 'ETH'], 'UAH')))
+	# from pprint import pprint
+	# pprint(load_currencies())
+	# for i in get_price(['BTC', 'ETH'], 'UAH'):
+	# 	for y in i:
+	# 		print('{}: {}'.format(y, i[y]))
+	# print()

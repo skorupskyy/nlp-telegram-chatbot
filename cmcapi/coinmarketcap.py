@@ -85,11 +85,7 @@ def load_currencies():
 
 # TODO: temporary driver program.
 if __name__ == '__main__':
-	from bot.util import format_general
-	print(format_general(get_price(['BTC', 'ETH'], 'UAH')))
-	# from pprint import pprint
-	# pprint(load_currencies())
-	# for i in get_price(['BTC', 'ETH'], 'UAH'):
-	# 	for y in i:
-	# 		print('{}: {}'.format(y, i[y]))
-	# print()
+	for i in get_prices(['BTC', 'ETH'], 'UAH'):
+		for y in i:
+			print('{}: {}'.format(y, i[y]))
+	print()

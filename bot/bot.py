@@ -4,17 +4,21 @@ from bot import messages as msg
 from bot import fmt
 from cmcapi import load_currencies, get_prices
 from app.logging import logger as default_logger
+from dflow.agent import Agent
+from dflow import intents
 
 from requests.exceptions import HTTPError
 
 from telegram.ext.filters import Filters
-from telegram import ParseMode as pm
 from telegram.ext import Updater, CommandHandler, MessageHandler
 
 
 class CurrencyInfoBot:
 
-	def __init__(self, token, logger=None):
+	def __init__(self, token, df_config, logger=None):
+		assert df_config is not None
+		self._df_config = df_config
+		
 		# If passed logger is None, setup default logger.
 		if not logger:
 			logger = default_logger
@@ -31,8 +35,8 @@ class CurrencyInfoBot:
 		dp.add_error_handler(self._log_error)
 
 		self._init_handlers(dp)
-		
 		self._currencies = load_currencies()
+		self._agents = {}
 
 	def start(self):
 		self._logger.info('Bot started at {}'.format(datetime.now()))
@@ -88,20 +92,22 @@ class CurrencyInfoBot:
 	def _text_message(self, update, context):
 		input_text = update.message.text
 		
-		# TODO: extract crypto-currencies and convert currency using DialogFlow agent!
-		currencies = list(map(lambda curr: curr.strip().lower(), input_text.split(',')))
-		from_currs = self._normalize_currencies(currencies[:-1])
-		to_curr = currencies[-1].upper()
-		# TODO:----------------------------------------------------------------------^
-		
-		try:
-			prices = get_prices(from_currs, to_curr)
-			response_text = fmt.make_general(prices)
-		except HTTPError as exc:
-			self._logger.warning('Unable to receive prices: {}'.format(exc))
-			response_text = 'Unable to collect currencies info: {}'.format(exc)
+		# Create new agent for user chat if not exists.
+		chat_id = update.message['chat']['id']
+		if chat_id not in self._agents:
+			self._agents[chat_id] = Agent(**self._df_config)
 
-		update.message.reply_text(response_text)
+		intent_result = self._process_intent(input_text, chat_id)
+		if isinstance(intent_result, dict):
+			try:
+				prices = self._retrieve_prices(intent_result)
+				response_message = self._format_response(prices, intent_result)
+			except HTTPError as exc:
+				self._logger.warning('Unable to receive prices: {}'.format(exc))
+				response_message = 'Unable to collect currencies information: {}'.format(exc)
+		else:
+			response_message = intent_result
+		update.message.reply_text(response_message)
 
 	# Handles a voice message.
 	@staticmethod
@@ -121,3 +127,36 @@ class CurrencyInfoBot:
 			if item in self._currencies:
 				normalized.append(self._currencies[item])
 		return normalized
+	
+	# Detects intent and retrieves response message.
+	# Returns dict or str.
+	# If intent was detected, returns dict with crypto-currencies
+	#   list and convert currency, otherwise returns str - default
+	#   response from intent.
+	def _process_intent(self, text_to_analyze, chat_id):
+		intent = self._agents[chat_id].detect_intent(text_to_analyze)
+		
+		self._logger.info('Detected intent: {}'.format(intent['name']))
+		
+		if intent['name'] == intents.CURRENCY_LISTING_INTENT:
+			return intent['parameters']
+		else:
+			return intent['fulfillment_text']
+
+	# Retrieves currencies prices using 'cmcapi' module.
+	def _retrieve_prices(self, dict_data):
+
+		# TODO: clarify parameters keys for actual DialogFlow model:
+		# TODO:     'crypto-currency'   - crypto-currencies to convert from;
+		# TODO:     'currency-name'     - currency to convert to.
+		from_currencies = self._normalize_currencies(
+			list(map(lambda curr: curr.strip().lower(), dict_data['crypto-currency']))
+		)
+		to_currency = dict_data['currency-name'].upper()
+		# TODO:----------------------------------------------------------------------^
+
+		return get_prices(from_currencies, to_currency)
+	
+	def _format_response(self, prices, dict_data):
+		# TODO: format prices according to requested format from @dict_data
+		return fmt.make_general(prices)

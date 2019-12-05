@@ -1,9 +1,18 @@
+from app import settings
 from bot import CurrencyInfoBot
-from app.settings import TELEGRAM_BOT_TOKEN
+from dflow import get_sessions_client
 
 
 def main():
-	bot = CurrencyInfoBot(TELEGRAM_BOT_TOKEN)
+	dialogflow_config = {
+		'project_id': settings.DIALOGFLOW_PROJECT_ID,
+		'lang_code': settings.DIALOGFLOW_LANGUAGE_CODE,
+		'client': get_sessions_client()
+	}
+	bot = CurrencyInfoBot(
+		token=settings.TELEGRAM_BOT_TOKEN,
+		df_config=dialogflow_config
+	)
 	bot.start()
 
 

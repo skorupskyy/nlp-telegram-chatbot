@@ -14,6 +14,7 @@ X_CMC_PRO_API_KEY = 'set in local settings'
 
 X_CMC_PRO_API_QUOTES_LATEST_URL = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?'
 
+X_CMC_PRO_API_LISTINGS_LATEST_URL = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?'
 
 try:
 	from app.local_settings import *

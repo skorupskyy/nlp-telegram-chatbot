@@ -97,11 +97,11 @@ class CurrencyInfoBot:
 		if chat_id not in self._agents:
 			self._agents[chat_id] = Agent(**self._df_config)
 
-		intent_result = self._process_intent(input_text, chat_id)
+		intent_result, intent_name = self._process_intent(input_text, chat_id)
 		if isinstance(intent_result, dict):
 			try:
 				prices = self._retrieve_prices(intent_result)
-				response_message = self._format_response(prices, intent_result)
+				response_message = self._format_response(prices, intent_name)
 			except HTTPError as exc:
 				self._logger.warning('Unable to receive prices: {}'.format(exc))
 				response_message = 'Unable to collect currencies information: {}'.format(exc)
@@ -132,16 +132,16 @@ class CurrencyInfoBot:
 	# Returns dict or str.
 	# If intent was detected, returns dict with crypto-currencies
 	#   list and convert currency, otherwise returns str - default
-	#   response from intent.
+	#   response from intent. Also returns intent's name.
 	def _process_intent(self, text_to_analyze, chat_id):
 		intent = self._agents[chat_id].detect_intent(text_to_analyze)
 		
 		self._logger.info('Detected intent: {}'.format(intent['name']))
 		
 		if intent['name'] == intents.CURRENCY_LISTING_INTENT:
-			return intent['parameters']
+			return intent['parameters'], intent['name']
 		else:
-			return intent['fulfillment_text']
+			return intent['fulfillment_text'], intent['name']
 
 	# Retrieves currencies prices using 'cmcapi' module.
 	def _retrieve_prices(self, dict_data):
@@ -157,6 +157,8 @@ class CurrencyInfoBot:
 
 		return get_prices(from_currencies, to_currency)
 	
-	def _format_response(self, prices, dict_data):
-		# TODO: format prices according to requested format from @dict_data
-		return fmt.make_general(prices)
+	def _format_response(self, prices, intent_name):
+		# TODO: format prices according to @intent_name
+		if intent_name == intents.CURRENCY_LISTING_INTENT:
+			return fmt.make_general(prices)
+		return 'Unknown format!'

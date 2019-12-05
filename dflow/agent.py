@@ -1,8 +1,10 @@
 import uuid
+import requests
 
 import dialogflow
 
 from dflow import helpers
+from app.settings import DIALOGFLOW_DEV_TOKEN
 
 
 # Agent is a wrapper for DialogFlow API.
@@ -54,12 +56,30 @@ def get_sessions_client():
 	return dialogflow.SessionsClient()
 
 
+# !ATTENTION! Manual use only!!! #TODO
+def configure_crypto_currency_entity():
+	url = 'https://api.dialogflow.com/v1'
+	headers = {
+		'Authorization': 'Bearer {}'.format(DIALOGFLOW_DEV_TOKEN),
+		'Content-Type': 'application/json'
+	}
+	resp = requests.get(url + '/entities', headers=headers)
+	entity_id = resp.json()[0]['id']
+
+	resp = requests.post(url + '/entities/' + entity_id + '/entries', headers=headers, json=[
+		{
+			'synonyms': ['Tether', 'USDT', 'usdt', 'Usdt', 'tether'],
+			'value': 'Tether'
+		},
+	])
+	print(resp.json())
+
+
 # TODO: temporary driver program!
 if __name__ == '__main__':
-	from app.settings import DIALOGFLOW_PROJECT_ID, DIALOGFLOW_LANGUAGE_CODE
-	
-	a = Agent(DIALOGFLOW_PROJECT_ID, DIALOGFLOW_LANGUAGE_CODE, get_sessions_client())
-	
-	intent = a.detect_intent('list Bitcoin, Ethereum and Tron to EUR')
-	for key, val in intent['parameters'].items():
-		print('{}({}): {}({})'.format(key, type(key), val, type(val)))
+	pass
+	# configure_crypto_currency_entity()
+	# from app.settings import DIALOGFLOW_PROJECT_ID, DIALOGFLOW_LANGUAGE_CODE
+	# a = Agent(DIALOGFLOW_PROJECT_ID, DIALOGFLOW_LANGUAGE_CODE, get_sessions_client())
+	# result = a.detect_intent('list Bitcoin, Ethereum and Tron to EUR')
+	# print()

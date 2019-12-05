@@ -19,6 +19,9 @@ DIALOGFLOW_PROJECT_ID = 'set in local settings'
 # Default language code, override in local_settings.py if it is necessary.
 DIALOGFLOW_LANGUAGE_CODE = 'en-US'
 
+# Dev token.
+DIALOGFLOW_DEV_TOKEN = 'set in local settings'
+
 
 # CoinMarketCap API.
 X_CMC_PRO_API_KEY = 'set in local settings'

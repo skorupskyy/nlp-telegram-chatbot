@@ -108,3 +108,4 @@ venv.bak/
 
 # App stuff
 kb.pro
+app/private_key.json

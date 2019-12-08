@@ -106,6 +106,9 @@ venv.bak/
 # PyCharm
 .idea/
 
+#VS code
+.vscode/
+
 # App stuff
 kb.pro
 app/private_key.json

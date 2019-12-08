@@ -91,7 +91,7 @@ class CurrencyInfoBot:
 	# Handles the text message.
 	def _text_message(self, update, context):
 		input_text = update.message.text
-		
+		print("------")
 		# Create new agent for user chat if not exists.
 		chat_id = update.message['chat']['id']
 		if chat_id not in self._agents:
@@ -101,12 +101,14 @@ class CurrencyInfoBot:
 		if isinstance(intent_result, dict):
 			try:
 				prices = self._retrieve_prices(intent_result)
+				print(prices)
 				response_message = self._format_response(prices, intent_name)
 			except HTTPError as exc:
 				self._logger.warning('Unable to receive prices: {}'.format(exc))
 				response_message = 'Unable to collect currencies information: {}'.format(exc)
 		else:
 			response_message = intent_result
+		print(response_message)
 		update.message.reply_text(response_message)
 
 	# Handles a voice message.
@@ -138,7 +140,7 @@ class CurrencyInfoBot:
 		
 		self._logger.info('Detected intent: {}'.format(intent['name']))
 		
-		if intent['name'] == intents.CURRENCY_LISTING_INTENT:
+		if intent['name'] == intents.QUOTES_INTENT:
 			return intent['parameters'], intent['name']
 		else:
 			return intent['fulfillment_text'], intent['name']
@@ -159,6 +161,6 @@ class CurrencyInfoBot:
 	
 	def _format_response(self, prices, intent_name):
 		# TODO: format prices according to @intent_name
-		if intent_name == intents.CURRENCY_LISTING_INTENT:
+		if intent_name == intents.QUOTES_INTENT:
 			return fmt.make_general(prices)
 		return 'Unknown format!'

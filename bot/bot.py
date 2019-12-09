@@ -6,7 +6,7 @@ from cmcapi import load_currencies, get_prices
 from app.logging import logger as default_logger
 from dflow.agent import Agent
 from dflow import intents
-
+from dflow import entities
 from requests.exceptions import HTTPError
 
 from telegram.ext.filters import Filters
@@ -97,6 +97,7 @@ class CurrencyInfoBot:
 		if chat_id not in self._agents:
 			self._agents[chat_id] = Agent(**self._df_config)
 
+		# print(chat_id)
 		intent_result, intent_name = self._process_intent(input_text, chat_id)
 		if isinstance(intent_result, dict):
 			try:
@@ -108,7 +109,7 @@ class CurrencyInfoBot:
 				response_message = 'Unable to collect currencies information: {}'.format(exc)
 		else:
 			response_message = intent_result
-		print(response_message)
+		# print(response_message)
 		update.message.reply_text(response_message)
 
 	# Handles a voice message.
@@ -152,9 +153,9 @@ class CurrencyInfoBot:
 		# TODO:     'crypto-currency'   - crypto-currencies to convert from;
 		# TODO:     'currency-name'     - currency to convert to.
 		from_currencies = self._normalize_currencies(
-			list(map(lambda curr: curr.strip().lower(), dict_data['crypto-currency']))
+			list(map(lambda curr: curr.strip().lower(), dict_data[entities.CRYPTOCURRENCY]))
 		)
-		to_currency = dict_data['currency-name'].upper()
+		to_currency = dict_data[entities.FIAT_CURRENCY].upper()
 		# TODO:----------------------------------------------------------------------^
 
 		return get_prices(from_currencies, to_currency)

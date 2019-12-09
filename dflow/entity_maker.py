@@ -7,21 +7,6 @@ def make_first_upper(word):
     return word[0].upper() + word[1:len(word)]
 
 
-def make_all_lower(word):
-    return word.lower()
-
-
-def make_simple_entity(name, symbol):
-    result = {}
-    value = make_first_upper(name)
-
-    synonyms = [make_first_upper(name), symbol, make_all_lower(symbol), make_first_upper(make_all_lower(symbol)), name]
-
-    result['synonyms'] = synonyms
-    result['value'] = value
-    return result
-
-
 # !ATTENTION! Manual use only!!! #TODO
 def configure_crypto_currency_entity():
     url = 'https://api.dialogflow.com/v1'
@@ -39,8 +24,34 @@ def configure_crypto_currency_entity():
     entities = []
     with open('./cmcapi/currencies.json', 'r') as f:
         data = json.load(f)
+    set_of_names = set()
     for d in data:
-        entities.append(make_simple_entity(d, data[d]))
+        result = {}
+        name = d
+        symbol = data[d]
+
+        if name not in set_of_names:
+            set_of_names.add(name)
+            # "btc": "BTC",
+            # "eth": "ETH",
+            # "xrp": "XRP"
+            if name.lower() == symbol.lower():
+                value = name.lower()
+                synonyms = [symbol.lower(), symbol.upper(), make_first_upper(symbol.lower())]
+            # "ripple": "XRP",
+            # "bitcoin": "BTC",
+            # "ethereum": "ETH"
+            else:
+                value = make_first_upper(name)
+                synonyms = [make_first_upper(name), name.upper(), name.lower()]
+                if name.lower() == "ethereum":
+                    synonyms.append("Ether")
+                    synonyms.append("ETHER")
+                    synonyms.append("ether")
+
+        result['synonyms'] = synonyms
+        result['value'] = value
+        entities.append(result)
 
     resp = requests.post(url + '/entities/' + entity_id + '/entries', headers=headers, json=entities)
     print(resp.json())

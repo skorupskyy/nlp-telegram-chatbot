@@ -91,7 +91,7 @@ class CurrencyInfoBot:
 	# Handles the text message.
 	def _text_message(self, update, context):
 		input_text = update.message.text
-		print("------")
+		# print("------")
 		# Create new agent for user chat if not exists.
 		chat_id = update.message['chat']['id']
 		if chat_id not in self._agents:

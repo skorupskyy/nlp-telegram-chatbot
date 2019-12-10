@@ -1,10 +1,8 @@
 import uuid
-import requests
 
 import dialogflow
 
 from dflow import helpers
-from app.settings import DIALOGFLOW_DEV_TOKEN
 
 
 # Agent is a wrapper for DialogFlow API.
@@ -38,12 +36,17 @@ class Agent:
 			)
 		)
 		fields = dict(response.query_result.parameters.fields)
+		# print("params: ", response.query_result.parameters)
 		parameters = {}
 		for p_key, p_value in fields.items():
 			if len(p_value.string_value) > 0:
 				parameters[p_key] = p_value.string_value
 			else:
 				parameters[p_key] = [actual_val.string_value for actual_val in p_value.list_value.values]
+		# print("parameters: ", parameters)
+		# print("fulf:  ", response.query_result.fulfillment_text)
+		# print("query text:  ", response.query_result.query_text)
+		# print("name:  ", response.query_result.intent.display_name)
 		return {
 			'query_text': response.query_result.query_text,
 			'name': response.query_result.intent.display_name,
@@ -54,25 +57,6 @@ class Agent:
 
 def get_sessions_client():
 	return dialogflow.SessionsClient()
-
-
-# !ATTENTION! Manual use only!!! #TODO
-def configure_crypto_currency_entity():
-	url = 'https://api.dialogflow.com/v1'
-	headers = {
-		'Authorization': 'Bearer {}'.format(DIALOGFLOW_DEV_TOKEN),
-		'Content-Type': 'application/json'
-	}
-	resp = requests.get(url + '/entities', headers=headers)
-	entity_id = resp.json()[0]['id']
-
-	resp = requests.post(url + '/entities/' + entity_id + '/entries', headers=headers, json=[
-		{
-			'synonyms': ['Tether', 'USDT', 'usdt', 'Usdt', 'tether'],
-			'value': 'Tether'
-		},
-	])
-	print(resp.json())
 
 
 # TODO: temporary driver program!

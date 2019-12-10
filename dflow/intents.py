@@ -1,2 +1,3 @@
+LISTING_INTENT = 'Listing Intent'
 
-CURRENCY_LISTING_INTENT = 'CurrencyListingIntent'
+QUOTES_INTENT = 'Quotes Intent'

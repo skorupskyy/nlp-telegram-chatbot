@@ -172,7 +172,7 @@ class CurrencyInfoBot:
 	# Retrieves currencies prices using 'cmcapi' module.
 	def _retrieve_prices(self, dict_data):
 		from_currencies = self._normalize_currencies(
-			list(map(lambda curr: curr.strip().lower(), dict_data[entities.CRYPTO_CURRENCY]))
+			list(map(lambda curr: curr.strip().lower(), dict_data[entities.CRYPTOCURRENCY]))
 		)
 		if isinstance(dict_data[entities.FIAT_CURRENCY], str):
 			to_currency = dict_data[entities.FIAT_CURRENCY].upper()

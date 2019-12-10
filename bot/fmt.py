@@ -35,7 +35,7 @@ def make_one_currency(curs):
 
 
 def make_currencies_top(currencies, sort):
-	result = 'Top {} crypto currencies{}'.format(len(currencies), ' by {}'.format(sort) if sort and sort != [] else '')
+	result = 'Top {} cryptocurrencies{}'.format(len(currencies), ' by {}'.format(sort) if sort and sort != [] else '')
 	for idx, cur in enumerate(currencies):
 		result += '\n {}. {}'.format(idx + 1, cur)
 

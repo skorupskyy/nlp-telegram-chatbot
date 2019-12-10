@@ -93,7 +93,7 @@ class PrologKb:
 			return []
 		return list(map(lambda x: x['Y'], result))
 
-	# Returns list of crypto currencies exchanged by a user_id.
+	# Returns list of cryptocurrencies exchanged by a user_id.
 	def get_crypto_currencies(self, user_id):
 		result = self._call('get_crypto_currencies({}, Y)'.format(
 			self._norm_user_id(user_id)

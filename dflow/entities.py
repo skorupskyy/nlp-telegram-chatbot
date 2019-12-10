@@ -1,6 +1,6 @@
 FIAT_CURRENCY = "Fiat_currency"
 
-CRYPTOCURRENCY = "Cryptocurrency"
+CRYPTO_CURRENCY = "Cryptocurrency"
 
 SORTING_PARAMETERS = "Sorting_parameters"
 

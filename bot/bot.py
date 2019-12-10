@@ -3,7 +3,7 @@ from datetime import datetime
 from bot import messages as msg
 from bot import fmt
 from cmcapi import load_currencies, get_prices, get_listing, load_entities
-from app.logging import logger as default_logger
+from app.logger import logger as default_logger
 from dflow.agent import Agent
 from dflow import intents
 from dflow import entities
@@ -102,25 +102,30 @@ class CurrencyInfoBot:
 			if isinstance(intent_result, dict):
 				try:
 					prices = self._retrieve_prices(intent_result)
-					print(prices)
+					# print(prices)
 					response_message = self._format_response(prices, intent_name, None)
 				except HTTPError as exc:
 					self._logger.warning('Unable to receive prices: {}'.format(exc))
 					response_message = 'Unable to collect currencies information: {}'.format(exc)
+			else:
+				response_message = 'Oops, something went wrong...'
 		elif intent_name == intents.LISTING_INTENT:
 			if isinstance(intent_result, dict):
 				try:
 					listing = self._retrieve_listing(intent_result)
-					response_message = self._format_response(listing, intent_name, intent_result[entities.SORTING_PARAMETERS])
+					response_message = self._format_response(
+						listing, intent_name, intent_result[entities.SORTING_PARAMETERS]
+					)
 					# response_message = listing
 				except HTTPError as exc:
 					self._logger.warning('Unable to receive currencies list: {}'.format(exc))
 					response_message = 'Unable to collect currencies list: {}'.format(exc)
-
+			else:
+				response_message = 'Oops, something went wrong...'
 		else:
 			response_message = intent_result
 
-		print(response_message)
+		# print(response_message)
 		update.message.reply_text(response_message)
 
 	# Handles a voice message.
@@ -147,7 +152,7 @@ class CurrencyInfoBot:
 			if item.lower() in self._entities:
 				return self._entities[item.lower()]
 			else:
-				return self._entities["price"]
+				return self._entities['price']
 	
 	# Detects intent and retrieves response message.
 	# Returns dict or str.
@@ -167,9 +172,12 @@ class CurrencyInfoBot:
 	# Retrieves currencies prices using 'cmcapi' module.
 	def _retrieve_prices(self, dict_data):
 		from_currencies = self._normalize_currencies(
-			list(map(lambda curr: curr.strip().lower(), dict_data[entities.CRYPTOCURRENCY]))
+			list(map(lambda curr: curr.strip().lower(), dict_data[entities.CRYPTO_CURRENCY]))
 		)
-		to_currency = dict_data[entities.FIAT_CURRENCY].upper()
+		if isinstance(dict_data[entities.FIAT_CURRENCY], str):
+			to_currency = dict_data[entities.FIAT_CURRENCY].upper()
+		else:
+			to_currency = dict_data[entities.FIAT_CURRENCY]
 
 		return get_prices(from_currencies, to_currency)
 
@@ -179,9 +187,10 @@ class CurrencyInfoBot:
 
 		# TODO: upgrade listing by "name" parameter
 		# TODO: give the user the ability to choose parameters convert(USD...) and sort_dir(desc, asc)
-		return get_listing(limit, "USD", sort, "desc")
-	
-	def _format_response(self, params, intent_name, sort=None):
+		return get_listing(limit, 'USD', sort, 'desc')
+
+	@staticmethod
+	def _format_response(params, intent_name, sort=None):
 		if intent_name == intents.QUOTES_INTENT:
 			# params -> prices
 			return fmt.make_one_currency(params)

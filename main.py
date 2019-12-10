@@ -17,6 +17,5 @@ def main():
 
 
 if __name__ == '__main__':
-	from storage.kb import init, main
-	init()
+	from storage.kb import main
 	main()

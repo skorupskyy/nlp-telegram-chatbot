@@ -21,3 +21,5 @@ def main():
 if __name__ == '__main__':
     main()
     # de.configure_crypto_currency_entity()
+    # de.configure_count_entity()
+    # de.update_currencies_json()

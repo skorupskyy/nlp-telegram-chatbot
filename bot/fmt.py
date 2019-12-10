@@ -17,6 +17,7 @@ _general = '{}\n{}\n{}\n{}\n{}'.format(_ext_title, _price, _rank, _currency_chan
 
 
 def format_currencies(template, currencies, keys):
+    # TODO: add space every 3 symbols in market capacity
     formatted = []
     for curr in currencies:
         formatted.append(template.format(**{key: curr[key] for key in keys}))
@@ -30,7 +31,7 @@ def make_one_currency(curs):
             'rank', 'change_per_1h', 'change_per_24h',
             'change_per_7d', 'market_capacity'
         ])
-    make_general(curs)
+    return make_general(curs)
 
 
 def make_currencies_top(currencies, sort):

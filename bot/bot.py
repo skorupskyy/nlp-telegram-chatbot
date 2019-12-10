@@ -2,7 +2,7 @@ from datetime import datetime
 
 from bot import messages as msg
 from bot import fmt
-from cmcapi import load_currencies, get_prices, get_listing
+from cmcapi import load_currencies, get_prices, get_listing, load_entities
 from app.logging import logger as default_logger
 from dflow.agent import Agent
 from dflow import intents
@@ -36,6 +36,7 @@ class CurrencyInfoBot:
 
 		self._init_handlers(dp)
 		self._currencies = load_currencies()
+		self._entities = load_entities()
 		self._agents = {}
 
 	def start(self):
@@ -101,7 +102,8 @@ class CurrencyInfoBot:
 			if isinstance(intent_result, dict):
 				try:
 					prices = self._retrieve_prices(intent_result)
-					response_message = self._format_response(prices, intent_name)
+					print(prices)
+					response_message = self._format_response(prices, intent_name, None)
 				except HTTPError as exc:
 					self._logger.warning('Unable to receive prices: {}'.format(exc))
 					response_message = 'Unable to collect currencies information: {}'.format(exc)
@@ -118,6 +120,7 @@ class CurrencyInfoBot:
 		else:
 			response_message = intent_result
 
+		print(response_message)
 		update.message.reply_text(response_message)
 
 	# Handles a voice message.
@@ -135,9 +138,16 @@ class CurrencyInfoBot:
 	def _normalize_currencies(self, input_currencies):
 		normalized = []
 		for item in input_currencies:
-			if item in self._currencies:
+			if item.lower() in self._currencies:
 				normalized.append(self._currencies[item])
 		return normalized
+
+	def _normalize_entities(self, input_entities):
+		for item in input_entities:
+			if item.lower() in self._entities:
+				return self._entities[item.lower()]
+			else:
+				return self._entities["price"]
 	
 	# Detects intent and retrieves response message.
 	# Returns dict or str.
@@ -165,14 +175,13 @@ class CurrencyInfoBot:
 
 	def _retrieve_listing(self, dict_data):
 		limit = dict_data[entities.COUNT]
-		sort = dict_data[entities.SORTING_PARAMETERS]
+		sort = self._normalize_entities(dict_data[entities.SORTING_PARAMETERS])
 
 		# TODO: upgrade listing by "name" parameter
 		# TODO: give the user the ability to choose parameters convert(USD...) and sort_dir(desc, asc)
 		return get_listing(limit, "USD", sort, "desc")
 	
 	def _format_response(self, params, intent_name, sort=None):
-		# TODO: format prices according to @intent_name
 		if intent_name == intents.QUOTES_INTENT:
 			# params -> prices
 			return fmt.make_one_currency(params)

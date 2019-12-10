@@ -7,7 +7,6 @@ def make_first_upper(word):
     return word[0].upper() + word[1:len(word)]
 
 
-# !ATTENTION! Manual use only!!! #TODO
 def configure_crypto_currency_entity():
     url = 'https://api.dialogflow.com/v1'
     headers = {
@@ -55,3 +54,43 @@ def configure_crypto_currency_entity():
 
     resp = requests.post(url + '/entities/' + entity_id + '/entries', headers=headers, json=entities)
     print(resp.json())
+
+
+def configure_count_entity():
+    url = 'https://api.dialogflow.com/v1'
+    headers = {
+        'Authorization': 'Bearer {}'.format(DIALOGFLOW_DEV_TOKEN),
+        'Content-Type': 'application/json'
+    }
+    resp = requests.get(url + '/entities', headers=headers)
+
+    entity_id = resp.json()[1]['id']
+
+    entities = []
+    for i in range(1, 1001):
+        result = {'synonyms': [i], 'value': str(i)}
+
+        entities.append(result)
+
+    print(entities)
+    resp = requests.post(url + '/entities/' + entity_id + '/entries', headers=headers, json=entities)
+    print(resp.json())
+
+
+def update_currencies_json():
+    # fixed bug: some currencies do not have symbols
+    with open('./cmcapi/currencies.json', 'r') as f:
+        data = json.load(f)
+
+    result = {}
+    for d in data:
+        if d.lower() != data[d].lower():
+            result[d.lower()] = d.lower()
+        elif d.lower() == data[d].lower():
+            for e in data:
+                if data[d].lower() == data[e].lower() and e.lower() != data[e].lower():
+                    result[d.lower()] = e.lower()
+
+    # now in "./cmcapi/currencies.json"
+    with open('./cmcapi/temp.json', 'w') as fp:
+        json.dump(result, fp, indent=2)

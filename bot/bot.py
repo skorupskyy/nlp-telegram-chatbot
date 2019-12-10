@@ -2,11 +2,11 @@ from datetime import datetime
 
 from bot import messages as msg
 from bot import fmt
-from cmcapi import load_currencies, get_prices
+from cmcapi import load_currencies, get_prices, get_listing, load_entities
 from app.logging import logger as default_logger
 from dflow.agent import Agent
 from dflow import intents
-
+from dflow import entities
 from requests.exceptions import HTTPError
 
 from telegram.ext.filters import Filters
@@ -36,6 +36,7 @@ class CurrencyInfoBot:
 
 		self._init_handlers(dp)
 		self._currencies = load_currencies()
+		self._entities = load_entities()
 		self._agents = {}
 
 	def start(self):
@@ -91,22 +92,35 @@ class CurrencyInfoBot:
 	# Handles the text message.
 	def _text_message(self, update, context):
 		input_text = update.message.text
-		
 		# Create new agent for user chat if not exists.
 		chat_id = update.message['chat']['id']
 		if chat_id not in self._agents:
 			self._agents[chat_id] = Agent(**self._df_config)
 
 		intent_result, intent_name = self._process_intent(input_text, chat_id)
-		if isinstance(intent_result, dict):
-			try:
-				prices = self._retrieve_prices(intent_result)
-				response_message = self._format_response(prices, intent_name)
-			except HTTPError as exc:
-				self._logger.warning('Unable to receive prices: {}'.format(exc))
-				response_message = 'Unable to collect currencies information: {}'.format(exc)
+		if intent_name == intents.QUOTES_INTENT:
+			if isinstance(intent_result, dict):
+				try:
+					prices = self._retrieve_prices(intent_result)
+					print(prices)
+					response_message = self._format_response(prices, intent_name, None)
+				except HTTPError as exc:
+					self._logger.warning('Unable to receive prices: {}'.format(exc))
+					response_message = 'Unable to collect currencies information: {}'.format(exc)
+		elif intent_name == intents.LISTING_INTENT:
+			if isinstance(intent_result, dict):
+				try:
+					listing = self._retrieve_listing(intent_result)
+					response_message = self._format_response(listing, intent_name, intent_result[entities.SORTING_PARAMETERS])
+					# response_message = listing
+				except HTTPError as exc:
+					self._logger.warning('Unable to receive currencies list: {}'.format(exc))
+					response_message = 'Unable to collect currencies list: {}'.format(exc)
+
 		else:
 			response_message = intent_result
+
+		print(response_message)
 		update.message.reply_text(response_message)
 
 	# Handles a voice message.
@@ -124,9 +138,16 @@ class CurrencyInfoBot:
 	def _normalize_currencies(self, input_currencies):
 		normalized = []
 		for item in input_currencies:
-			if item in self._currencies:
+			if item.lower() in self._currencies:
 				normalized.append(self._currencies[item])
 		return normalized
+
+	def _normalize_entities(self, input_entities):
+		for item in input_entities:
+			if item.lower() in self._entities:
+				return self._entities[item.lower()]
+			else:
+				return self._entities["price"]
 	
 	# Detects intent and retrieves response message.
 	# Returns dict or str.
@@ -138,27 +159,33 @@ class CurrencyInfoBot:
 		
 		self._logger.info('Detected intent: {}'.format(intent['name']))
 		
-		if intent['name'] == intents.CURRENCY_LISTING_INTENT:
+		if intent['name'] == intents.QUOTES_INTENT or intent['name'] == intents.LISTING_INTENT:
 			return intent['parameters'], intent['name']
 		else:
 			return intent['fulfillment_text'], intent['name']
 
 	# Retrieves currencies prices using 'cmcapi' module.
 	def _retrieve_prices(self, dict_data):
-
-		# TODO: clarify parameters keys for actual DialogFlow model:
-		# TODO:     'crypto-currency'   - crypto-currencies to convert from;
-		# TODO:     'currency-name'     - currency to convert to.
 		from_currencies = self._normalize_currencies(
-			list(map(lambda curr: curr.strip().lower(), dict_data['crypto-currency']))
+			list(map(lambda curr: curr.strip().lower(), dict_data[entities.CRYPTOCURRENCY]))
 		)
-		to_currency = dict_data['currency-name'].upper()
-		# TODO:----------------------------------------------------------------------^
+		to_currency = dict_data[entities.FIAT_CURRENCY].upper()
 
 		return get_prices(from_currencies, to_currency)
+
+	def _retrieve_listing(self, dict_data):
+		limit = dict_data[entities.COUNT]
+		sort = self._normalize_entities(dict_data[entities.SORTING_PARAMETERS])
+
+		# TODO: upgrade listing by "name" parameter
+		# TODO: give the user the ability to choose parameters convert(USD...) and sort_dir(desc, asc)
+		return get_listing(limit, "USD", sort, "desc")
 	
-	def _format_response(self, prices, intent_name):
-		# TODO: format prices according to @intent_name
-		if intent_name == intents.CURRENCY_LISTING_INTENT:
-			return fmt.make_general(prices)
+	def _format_response(self, params, intent_name, sort=None):
+		if intent_name == intents.QUOTES_INTENT:
+			# params -> prices
+			return fmt.make_one_currency(params)
+		elif intent_name == intents.LISTING_INTENT:
+			# params -> currencies
+			return fmt.make_currencies_top(params, sort)
 		return 'Unknown format!'

@@ -35,7 +35,7 @@ class CurrencyInfoBot:
 		dp = self._updater.dispatcher
 
 		# log all errors.
-		#dp.add_error_handler(self._log_error)
+		dp.add_error_handler(self._log_error)
 
 		self._init_handlers(dp)
 		self._currencies = load_currencies()
@@ -195,22 +195,19 @@ class CurrencyInfoBot:
 		if isinstance(dict_data[entities.FIAT_CURRENCY], str):
 			to_currency = dict_data[entities.FIAT_CURRENCY].upper()
 		else:
-			if len(dict_data[entities.FIAT_CURRENCY]) == 0:
-				dict_data[entities.FIAT_CURRENCY] = self.get_user_fiat_currency(user_id).upper()
-			else:
-				to_currency = dict_data[entities.FIAT_CURRENCY]
-		print(to_currency)
+			if len(dict_data[entities.FIAT_CURRENCY]) != 0:
+				dict_data[entities.FIAT_CURRENCY] = self.get_user_fiat_currency(user_id)[0].upper()
+			to_currency = dict_data[entities.FIAT_CURRENCY]
 		self._kb.add_exchange(user_id, to_currency, True)
 		for x in from_currencies:
 			self._kb.add_exchange(user_id, x, False)
 		return get_prices(from_currencies, to_currency)
 
 	def _retrieve_listing(self, dict_data):
-		if isinstance(dict_data[entities.COUNT], str):
-			if dict_data[entities.COUNT].isdigit():
-				limit = str(max(int(dict_data[entities.COUNT]), 1))
-			else:
-				limit = DEFAULT_LIMIT_FOR_LISTING
+		if isinstance(dict_data[entities.COUNT], str) and dict_data[entities.COUNT].isdigit():
+			limit = str(max(int(dict_data[entities.COUNT]), 1))
+		else:
+			limit = DEFAULT_LIMIT_FOR_LISTING
 		sort = self._normalize_entities(dict_data[entities.SORTING_PARAMETERS])
 
 		# TODO: upgrade listing by "name" parameter

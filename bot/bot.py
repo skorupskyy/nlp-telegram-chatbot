@@ -105,7 +105,7 @@ class CurrencyInfoBot:
 		if intent_name == intents.QUOTES_INTENT:
 			if isinstance(intent_result, dict):
 				try:
-					prices = self._retrieve_prices(intent_result,chat_id)
+					prices = self._retrieve_prices(intent_result, chat_id)
 					response_message = self._format_response(prices, intent_name, None)
 				except HTTPError as exc:
 					self._logger.warning('Unable to receive prices: {}'.format(exc))
@@ -115,7 +115,7 @@ class CurrencyInfoBot:
 		elif intent_name == intents.LISTING_INTENT:
 			if isinstance(intent_result, dict):
 				try:
-					listing = self._retrieve_listing(intent_result)
+					listing = self._retrieve_listing(intent_result, chat_id)
 					response_message = self._format_response(
 						listing, intent_name, intent_result[entities.SORTING_PARAMETERS]
 					)
@@ -184,7 +184,6 @@ class CurrencyInfoBot:
 			return currencies
 		return currencies[-5:]
 
-
 	# Retrieves currencies prices using 'cmcapi' module.
 	def _retrieve_prices(self, dict_data, user_id):
 		from_currencies = self._normalize_currencies(
@@ -195,15 +194,19 @@ class CurrencyInfoBot:
 		if isinstance(dict_data[entities.FIAT_CURRENCY], str):
 			to_currency = dict_data[entities.FIAT_CURRENCY].upper()
 		else:
-			if len(dict_data[entities.FIAT_CURRENCY]) != 0:
-				dict_data[entities.FIAT_CURRENCY] = self.get_user_fiat_currency(user_id)[0].upper()
+			if len(dict_data[entities.FIAT_CURRENCY]) == 0:
+				fc = self.get_user_fiat_currency(user_id)
+				if len(fc) > 0:
+					dict_data[entities.FIAT_CURRENCY] = fc[0].upper()
+				else:
+					dict_data[entities.FIAT_CURRENCY] = 'USD'
 			to_currency = dict_data[entities.FIAT_CURRENCY]
 		self._kb.add_exchange(user_id, to_currency, True)
 		for x in from_currencies:
 			self._kb.add_exchange(user_id, x, False)
 		return get_prices(from_currencies, to_currency)
 
-	def _retrieve_listing(self, dict_data):
+	def _retrieve_listing(self, dict_data, user_id):
 		if isinstance(dict_data[entities.COUNT], str) and dict_data[entities.COUNT].isdigit():
 			limit = str(max(int(dict_data[entities.COUNT]), 1))
 		else:
@@ -212,7 +215,12 @@ class CurrencyInfoBot:
 
 		# TODO: upgrade listing by "name" parameter
 		# TODO: give the user the ability to choose parameters convert(USD...) and sort_dir(desc, asc)
-		return get_listing(limit, 'USD', sort, 'desc')
+		fiat_currencies = self.get_user_fiat_currency(user_id)
+		if len(fiat_currencies) > 0:
+			convert_to = fiat_currencies[0].upper()
+		else:
+			convert_to = 'USD'
+		return get_listing(limit, convert_to, sort, 'desc')
 
 	@staticmethod
 	def _format_response(params, intent_name, sort=None):

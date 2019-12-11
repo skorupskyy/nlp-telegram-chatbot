@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "venv\\Scripts\\python.exe",
+    "python.pythonPath": "C:\\Users\\Andriy Zhuk\\AppData\\Local\\Programs\\Python\\Python36\\python.exe",
 
     // The number of spaces a tab is equal to.
     "editor.tabSize": 4,

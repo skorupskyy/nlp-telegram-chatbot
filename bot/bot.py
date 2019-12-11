@@ -12,6 +12,9 @@ from requests.exceptions import HTTPError
 from telegram.ext.filters import Filters
 from telegram.ext import Updater, CommandHandler, MessageHandler
 
+from storage.kb import PrologKb
+
+DEFAULT_LIMIT_FOR_LISTING = '5'
 
 class CurrencyInfoBot:
 
@@ -32,12 +35,13 @@ class CurrencyInfoBot:
 		dp = self._updater.dispatcher
 
 		# log all errors.
-		dp.add_error_handler(self._log_error)
+		#dp.add_error_handler(self._log_error)
 
 		self._init_handlers(dp)
 		self._currencies = load_currencies()
 		self._entities = load_entities()
 		self._agents = {}
+		self._kb = PrologKb()
 
 	def start(self):
 		self._logger.info('Bot started at {}'.format(datetime.now()))
@@ -101,8 +105,7 @@ class CurrencyInfoBot:
 		if intent_name == intents.QUOTES_INTENT:
 			if isinstance(intent_result, dict):
 				try:
-					prices = self._retrieve_prices(intent_result)
-					# print(prices)
+					prices = self._retrieve_prices(intent_result,chat_id)
 					response_message = self._format_response(prices, intent_name, None)
 				except HTTPError as exc:
 					self._logger.warning('Unable to receive prices: {}'.format(exc))
@@ -169,20 +172,45 @@ class CurrencyInfoBot:
 		else:
 			return intent['fulfillment_text'], intent['name']
 
+	def get_user_fiat_currency(self, user_id):
+		currencies = self._kb.get_fiat_currencies(user_id)
+		if len(currencies) == 0:
+			return currencies
+		return currencies[-1:]
+
+	def get_user_crypto_currencies(self, user_id):
+		currencies = self._kb.get_crypto_currencies(user_id)
+		if len(currencies) == 0:
+			return currencies
+		return currencies[-5:]
+
+
 	# Retrieves currencies prices using 'cmcapi' module.
-	def _retrieve_prices(self, dict_data):
+	def _retrieve_prices(self, dict_data, user_id):
 		from_currencies = self._normalize_currencies(
 			list(map(lambda curr: curr.strip().lower(), dict_data[entities.CRYPTOCURRENCY]))
 		)
+		if len(from_currencies) == 0:
+			from_currencies = self.get_user_crypto_currencies(user_id)
 		if isinstance(dict_data[entities.FIAT_CURRENCY], str):
 			to_currency = dict_data[entities.FIAT_CURRENCY].upper()
 		else:
-			to_currency = dict_data[entities.FIAT_CURRENCY]
-
+			if len(dict_data[entities.FIAT_CURRENCY]) == 0:
+				dict_data[entities.FIAT_CURRENCY] = self.get_user_fiat_currency(user_id).upper()
+			else:
+				to_currency = dict_data[entities.FIAT_CURRENCY]
+		print(to_currency)
+		self._kb.add_exchange(user_id, to_currency, True)
+		for x in from_currencies:
+			self._kb.add_exchange(user_id, x, False)
 		return get_prices(from_currencies, to_currency)
 
 	def _retrieve_listing(self, dict_data):
-		limit = dict_data[entities.COUNT]
+		if isinstance(dict_data[entities.COUNT], str):
+			if dict_data[entities.COUNT].isdigit():
+				limit = str(max(int(dict_data[entities.COUNT]), 1))
+			else:
+				limit = DEFAULT_LIMIT_FOR_LISTING
 		sort = self._normalize_entities(dict_data[entities.SORTING_PARAMETERS])
 
 		# TODO: upgrade listing by "name" parameter

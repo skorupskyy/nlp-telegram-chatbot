@@ -16,6 +16,7 @@ from storage.kb import PrologKb
 
 DEFAULT_LIMIT_FOR_LISTING = '5'
 
+
 class CurrencyInfoBot:
 
 	def __init__(self, token, df_config, logger=None):
@@ -175,14 +176,14 @@ class CurrencyInfoBot:
 	def get_user_fiat_currency(self, user_id):
 		currencies = self._kb.get_fiat_currencies(user_id)
 		if len(currencies) == 0:
-			return currencies
-		return currencies[-1:]
+			return ''
+		return currencies[-1]
 
 	def get_user_crypto_currencies(self, user_id):
 		currencies = self._kb.get_crypto_currencies(user_id)
 		if len(currencies) == 0:
 			return currencies
-		return currencies[-5:]
+		return currencies[-3:]
 
 	# Retrieves currencies prices using 'cmcapi' module.
 	def _retrieve_prices(self, dict_data, user_id):
@@ -195,11 +196,8 @@ class CurrencyInfoBot:
 			to_currency = dict_data[entities.FIAT_CURRENCY].upper()
 		else:
 			if len(dict_data[entities.FIAT_CURRENCY]) == 0:
-				fc = self.get_user_fiat_currency(user_id)
-				if len(fc) > 0:
-					dict_data[entities.FIAT_CURRENCY] = fc[0].upper()
-				else:
-					dict_data[entities.FIAT_CURRENCY] = 'USD'
+				currency = self.get_user_fiat_currency(user_id)
+				dict_data[entities.FIAT_CURRENCY] = currency.upper() if currency != '' else 'USD'
 			to_currency = dict_data[entities.FIAT_CURRENCY]
 		self._kb.add_exchange(user_id, to_currency, True)
 		for x in from_currencies:

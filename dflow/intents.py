@@ -1,3 +1,9 @@
 LISTING_INTENT = 'Listing Intent'
 
 QUOTES_INTENT = 'Quotes Intent'
+
+
+ALL_INTENTS = [
+	QUOTES_INTENT,
+	LISTING_INTENT
+]

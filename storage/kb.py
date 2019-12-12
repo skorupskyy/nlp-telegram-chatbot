@@ -132,7 +132,7 @@ class PrologKb:
 		)
 		if not result:
 			return []
-		return list(map(lambda x: x['Y'], sorted(result, key=lambda a: self._from_timestamp(a['Z'].decode()))))
+		return list(set(map(lambda x: x['Y'], sorted(result, key=lambda a: self._from_timestamp(a['Z'].decode())))))
 
 	# Returns list of cryptocurrencies exchanged by a user_id.
 	def get_crypto_currencies(self, user_id):

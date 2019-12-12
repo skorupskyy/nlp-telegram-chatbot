@@ -168,7 +168,7 @@ class CurrencyInfoBot:
 		
 		self._logger.info('Detected intent: {}'.format(intent['name']))
 		
-		if intent['name'] == intents.QUOTES_INTENT or intent['name'] == intents.LISTING_INTENT:
+		if intent['name'] in intents.ALL_INTENTS:
 			return intent['parameters'], intent['name']
 		else:
 			return intent['fulfillment_text'], intent['name']
@@ -210,9 +210,6 @@ class CurrencyInfoBot:
 		else:
 			limit = DEFAULT_LIMIT_FOR_LISTING
 		sort = self._normalize_entities(dict_data[entities.SORTING_PARAMETERS])
-
-		# TODO: upgrade listing by "name" parameter
-		# TODO: give the user the ability to choose parameters convert(USD...) and sort_dir(desc, asc)
 		fiat_currencies = self.get_user_fiat_currency(user_id)
 		if len(fiat_currencies) > 0:
 			convert_to = fiat_currencies[0].upper()

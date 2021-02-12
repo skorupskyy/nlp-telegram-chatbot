@@ -64,7 +64,7 @@ def make_listings_url(limit, convert, sort=None, sort_dir=None):
 # returns list of dicts
 def get_prices(names, convert='USD'):
 	data = req(make_quotes_url(names, convert))
-
+	
 	def get_info(_x):
 		currency = data['data'][_x]
 		return {

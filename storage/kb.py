@@ -1,29 +1,60 @@
 import os
 from threading import RLock
+from datetime import datetime
 
-from pyswip import Prolog
+import pyswip
+import ctypes
 from pyswip.prolog import PrologError
 
 from app.settings import BASE_DIR
 
 DEFAULT_RULES = [
-	'get_crypto_currencies(User_id, X) :- crypto_currency(X), exchange(User_id, X).',
-	'get_fiat_currencies(User_id, X) :- fiat_currency(X), exchange(User_id, X).',
+	'get_crypto_currencies(User_id, X, Tstamp) :- crypto_currency(X), exchange(User_id, X, Tstamp).',
+	'get_fiat_currencies(User_id, X, Tstamp) :- fiat_currency(X), exchange(User_id, X, Tstamp).',
 	'exists_currency(Currency_name) :- fiat_currency(Currency_name); crypto_currency(Currency_name).',
 	'% section.facts'
 ]
 
+EXCHANGE_FACT = 'exchange({}, {}, {})'
+
+TIMESTAMP_FORMAT = '%d-%b-%Y (%H:%M:%S.%f)'
+
+
+class PrologMT(pyswip.Prolog):
+	"""Multi-threaded (one-to-one) pyswip.Prolog ad-hoc reimpl"""
+	_swipl = pyswip.core._lib
+
+	PL_thread_self = _swipl.PL_thread_self
+	PL_thread_self.restype = ctypes.c_int
+
+	PL_thread_attach_engine = _swipl.PL_thread_attach_engine
+	PL_thread_attach_engine.argtypes = [ctypes.c_void_p]
+	PL_thread_attach_engine.restype = ctypes.c_int
+
+	@classmethod
+	def _init_prolog_thread(cls):
+		pengine_id = cls.PL_thread_self()
+		if pengine_id == -1:
+			pengine_id = cls.PL_thread_attach_engine(None)
+			# Attach pengine to thread pengine_id
+		if pengine_id == -1:
+			raise pyswip.prolog.PrologError("Unable to attach new Prolog engine to the thread")
+
+	class _QueryWrapper(pyswip.Prolog._QueryWrapper):
+		def __call__(self, *args, **kwargs):
+			PrologMT._init_prolog_thread()
+			return super().__call__(*args, **kwargs)
+
 
 class PrologKb:
-	
-	def __init__(self, file_path):
+	def __init__(self, file_path='{}/kb.pro'.format(BASE_DIR)):
 		assert file_path is not None
 		self._file_path = file_path.replace('\\', '/')
 		
 		self._kb_file = open(self._file_path, 'a+')
 		self._prepare_file()
 		self._guard = RLock()
-		self._kb = Prolog()
+		self._kb = PrologMT()
 		self._kb.consult(self._file_path)
 
 	def _file_is_empty(self):
@@ -44,7 +75,8 @@ class PrologKb:
 
 	def _call(self, query):
 		try:
-			return list(self._kb.query(query))
+			li = list(self._kb.query(query))
+			return li
 		except PrologError:
 			return None
 
@@ -54,12 +86,20 @@ class PrologKb:
 
 	@staticmethod
 	def _norm_user_id(user_id):
-		return '"{}"'.format(user_id)
+		return '{}'.format(user_id)
+	
+	@staticmethod
+	def _get_timestamp():
+		return '"{}"'.format(datetime.now().strftime(TIMESTAMP_FORMAT))
+	
+	@staticmethod
+	def _from_timestamp(timestamp):
+		return datetime.strptime(timestamp, TIMESTAMP_FORMAT)
 
 	# Checks whether fact exchange(user_id, currency_name) exists in kb.
 	def _exists_exchange(self, user_id, currency_name):
-		result = self._call('exchange({}, {})'.format(
-			self._norm_user_id(user_id), self._norm_currency(currency_name)
+		result = self._call(EXCHANGE_FACT.format(
+			self._norm_user_id(user_id), self._norm_currency(currency_name), '_'
 		))
 		return len(result) != 0 if result else False
 
@@ -83,54 +123,60 @@ class PrologKb:
 			self._kb.consult(self._file_path)
 			
 			self._guard.release()
-
-	# Returns list of facts exchange relative to user_id.
-	def get_exchanges(self, user_id):
-		result = self._call('exchange({}, Y)'.format(
-			self._norm_user_id(user_id)
-		))
+		
+	# Returns list of currencies exchanged by a user_id
+	#   according to rule template.
+	def _get_list_of_exchanges(self, rule_template, user_id):
+		result = self._call(
+			rule_template.format(self._norm_user_id(user_id))
+		)
 		if not result:
 			return []
-		return list(map(lambda x: x['Y'], result))
+		return list(set(map(lambda x: x['Y'], sorted(result, key=lambda a: self._from_timestamp(a['Z'].decode())))))
 
 	# Returns list of cryptocurrencies exchanged by a user_id.
 	def get_crypto_currencies(self, user_id):
-		result = self._call('get_crypto_currencies({}, Y)'.format(
-			self._norm_user_id(user_id)
-		))
-		if not result:
-			return []
-		return list(map(lambda x: x['Y'], result))
+		return self._get_list_of_exchanges('get_crypto_currencies({}, Y, Z)', user_id)
 	
 	# Returns list of fiat currencies exchanged by a user_id.
-	def get_fiat_currencies(self, used_id):	
-		result = self._call('get_fiat_currencies({}, Y)'.format(
-			self._norm_user_id(used_id)
-		))
-		if not result:
-			return []
-		return list(map(lambda x: x['Y'], result))
+	def get_fiat_currencies(self, user_id):
+		return self._get_list_of_exchanges('get_fiat_currencies({}, Y, Z)', user_id)
+
+	# Returns list of facts exchange relative to user_id.
+	def get_exchanges(self, user_id):
+		return self._get_list_of_exchanges('exchange({}, Y, Z)', user_id)
 
 	# Add fact exchange(user_id, currency) to kb.
 	def add_exchange(self, user_id, currency, is_fiat=True):
-		if not self._exists_exchange(user_id, currency):
-			self._write('exchange({}, {}).\n'.format(
-				self._norm_user_id(user_id),
-				self._norm_currency(currency)
+		if len(currency) > 0:
+			# if not self._exists_exchange(user_id, currency):
+			self._write('{}.\n'.format(
+				EXCHANGE_FACT.format(
+					self._norm_user_id(user_id),
+					self._norm_currency(currency),
+					self._get_timestamp()
+				)
 			))
+			
 			if not self._exists_currency(currency):
 				if is_fiat:
 					self._write('fiat_currency({}).\n'.format(self._norm_currency(currency)))
 				else:
 					self._write('crypto_currency({}).\n'.format(self._norm_currency(currency)))
-
+		
 	# Add list of facts exchange(user_id, currency) to kb.
 	def add_exchanges(self, user_id, currencies):
 		facts = []
 		norm_user = self._norm_user_id(user_id)
 		for currency, is_fiat in currencies:
 			if not self._exists_exchange(user_id, currency):
-				facts.append('exchange({}, {}).'.format(norm_user, self._norm_currency(currency)))
+				facts.append('{}.'.format(
+					EXCHANGE_FACT.format(
+						norm_user,
+						self._norm_currency(currency),
+						self._get_timestamp()
+					))
+				)
 				if not self._exists_currency(currency):
 					if is_fiat:
 						facts.append('fiat_currency({}).'.format(self._norm_currency(currency)))
@@ -144,9 +190,9 @@ class PrologKb:
 # Simple driver program.
 # TODO: will be removed in future.
 def main():
-	kb = PrologKb('{}/kb.pro'.format(BASE_DIR))
+	kb = PrologKb()
 	
-	kb.add_exchange(5, 'euro')
+	kb.add_exchange(366889066, 'EUR', True)
 	li = [('dollar', True), ('ether', False)]
 	kb.add_exchanges(74, li)
 

@@ -19,6 +19,7 @@ def main():
 
 
 if __name__ == '__main__':
+    #from storage.kb import main
     main()
     # de.configure_crypto_currency_entity()
     # de.configure_count_entity()
